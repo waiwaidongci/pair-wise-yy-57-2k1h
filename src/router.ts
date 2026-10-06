@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Overview from './views/Overview.vue'
+import Construction from './views/Construction.vue'
 import Station from './views/Station.vue'
 import Cases from './views/Cases.vue'
 import Execution from './views/Execution.vue'
@@ -9,6 +10,7 @@ export default createRouter({
   history:createWebHistory(),
   routes:[
     { path:'/',name:'overview',component:Overview },
+    { path:'/construction',name:'construction',component:Construction },
     { path:'/station',name:'station',component:Station },
     { path:'/cases',name:'cases',component:Cases },
     { path:'/execution',name:'execution',component:Execution },
