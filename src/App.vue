@@ -8,6 +8,7 @@ const store = useTestStore()
 const nav = [
   { name:'overview', label:'回归总览' },
   { name:'station', label:'站场与进路' },
+  { name:'constructions', label:'施工账' },
   { name:'cases', label:'测试用例' },
   { name:'execution', label:'执行记录' },
   { name:'release', label:'基线与报告' },

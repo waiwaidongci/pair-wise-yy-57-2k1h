@@ -1,13 +1,29 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { routes, devices } from '../mock'
 import { useTestStore } from '../store'
+import { formatConstructionTime, routesAffectedByOrder } from '../construction'
 
 const store = useTestStore()
 const canvas = ref<HTMLCanvasElement>()
 const zoom = ref(1)
 let ctx: CanvasRenderingContext2D | undefined
 let resizeObserver: ResizeObserver | undefined
+
+/** 选中进路关联的施工（从施工账派生，不再读死 affectedBy） */
+const selectedRouteOrders = computed(() => {
+  const map = new Map<string, { id: string; title: string; device: string; start: string; end: string }>()
+  store.selectedRouteIds.forEach((routeId) => {
+    routesAffectedByRoute(routeId).forEach((order) => {
+      if (!map.has(order.id)) map.set(order.id, { id: order.id, title: order.title, device: store.deviceName(order.deviceId), start: formatConstructionTime(order.startTime), end: formatConstructionTime(order.endTime) })
+    })
+  })
+  return [...map.values()]
+})
+
+function routesAffectedByRoute(routeId: string) {
+  return store.activeOrders.filter((order) => routesAffectedByOrder(order, routes).some((route) => route.id === routeId))
+}
 
 function draw() {
   const element = canvas.value
@@ -53,5 +69,5 @@ watch(()=>store.selectedRouteIds, draw, { deep:true })
 <template>
   <section class="page-head"><div><p class="eyebrow">站场与进路关系</p><h1>Canvas 站场示意</h1><p>点击进路联动设备清单和受影响用例；缩放后可检查道岔、信号机和轨道区段关系。</p></div><n-space><n-button @click="zoom=Math.max(.7,zoom-.1); draw()">缩小</n-button><span>{{Math.round(zoom*100)}}%</span><n-button @click="zoom=Math.min(1.5,zoom+.1); draw()">放大</n-button></n-space></section>
   <div class="station-grid"><article class="card canvas-card"><div class="canvas-head"><span>海州站 · 计算机联锁平面示意</span><span>实线高亮：当前用例关联进路</span></div><canvas ref="canvas" class="station-canvas" @click="hitTest" /></article>
-    <aside class="card"><div class="panel-head"><div><h2>进路关系</h2><p>点击高亮或选择用例</p></div><n-tag>{{store.selectedRouteIds.length}} 条</n-tag></div><button v-for="route in routes" :key="route.id" class="route-row" :class="{active:store.selectedRouteIds.includes(route.id)}" @click="store.selectedRouteIds=[route.id]"><i :style="{background:route.color}"></i><div><b>{{route.id}} · {{route.name}}</b><small>{{route.devices.join(' → ')}}</small></div></button><n-divider /><h3>设备变更影响</h3><n-alert v-for="item in routes.filter((route)=>store.selectedRouteIds.includes(route.id)).flatMap((route)=>route.affectedBy)" :key="item" type="warning" :title="item" class="issue" /></aside></div>
+    <aside class="card"><div class="panel-head"><div><h2>进路关系</h2><p>点击高亮或选择用例</p></div><n-tag>{{store.selectedRouteIds.length}} 条</n-tag></div><button v-for="route in routes" :key="route.id" class="route-row" :class="{active:store.selectedRouteIds.includes(route.id)}" @click="store.selectedRouteIds=[route.id]"><i :style="{background:route.color}"></i><div><b>{{route.id}} · {{route.name}}</b><small>{{route.devices.join(' → ')}}</small></div></button><n-divider /><h3>设备变更影响</h3><p v-if="!selectedRouteOrders.length" style="color:#7a8798;font-size:13px">当前进路无关联施工。</p><n-alert v-for="item in selectedRouteOrders" :key="item.id" type="warning" :title="`${item.id} · ${item.title}`" class="issue"><template #default><small>{{item.device}} · {{item.start}} → {{item.end}}</small></template></n-alert></aside></div>
 </template>
